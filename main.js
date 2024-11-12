@@ -132,13 +132,18 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
     });
     return Array.from(variableMap.values()).sort((a, b) => a.index - b.index);
   }
-  extractTitle(template, data) {
-    const h1Match = template.match(/^# (.+)$/m);
+  extractTitle(template, data, templateName) {
+    const h1Match = template.match(/^#\s+(.+)$/m);
     if (h1Match) {
       let title = h1Match[1];
       Object.entries(data).forEach(([key, value]) => {
-        const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\*?\\s*\\}\\}`, "g");
-        title = title.replace(regex, value);
+        if (value && value.trim()) {
+          const regex = new RegExp(
+            `\\{\\{\\s*${key}(?:\\s*\\*)?(?:\\s*\\|[^}]*)?\\s*\\}\\}`,
+            "g"
+          );
+          title = title.replace(regex, value);
+        }
       });
       return title;
     }
@@ -146,7 +151,7 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
       return data["title"];
     }
     const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-    return `${template}_${today}`;
+    return `${templateName}_${today}`;
   }
   parseTags(input) {
     return input.split(/[\s,]+/).map((tag) => tag.trim()).filter((tag) => tag.length > 0).map((tag) => tag.startsWith("#") ? tag : `#${tag}`).join(" ");
@@ -164,9 +169,23 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
         if ("tags" in data) {
           data["tags"] = this.parseTags(data["tags"]);
         }
-        const outputPath = data["template_output"];
+        const templateOutputMatch = template.match(/\{\{template_output(?:\s*\*)?(?:\s*\|[^}]*)?\}\}(.*?)(?=\n|$)/);
+        let outputPath = "";
+        if (templateOutputMatch) {
+          const templatePath = templateOutputMatch[1].trim();
+          const modalPath = data["template_output"] || "";
+          if (modalPath) {
+            const cleanTemplatePath = templatePath.replace(/\/$/, "");
+            const cleanModalPath = modalPath.replace(/\/$/, "");
+            outputPath = cleanTemplatePath ? `${cleanTemplatePath}/${cleanModalPath}`.replace(/\/+/g, "/") : cleanModalPath;
+          } else {
+            outputPath = templatePath;
+          }
+        } else {
+          outputPath = data["template_output"] || "";
+        }
         delete data["template_output"];
-        const fileName = this.extractTitle(template, data).replace(/[\\/:*?"<>|]/g, "_") + ".md";
+        const fileName = this.extractTitle(template, data, templateName).replace(/[\\/:*?"<>|]/g, "_") + ".md";
         let filePath;
         if (outputPath) {
           let normalizedPath = outputPath.startsWith("/") ? outputPath : "/" + outputPath;
@@ -187,16 +206,40 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
         }
         let rendered = template;
         console.log("Starting template:", rendered);
-        Object.entries(data).forEach(([key, value]) => {
-          console.log(`Replacing ${key} with ${value}`);
-          const regex = new RegExp(
-            `\\{\\{\\s*${key}(?:\\s*\\*)?(?:\\s*\\|[^}]*)?\\s*\\}\\}`,
-            "g"
-          );
-          rendered = rendered.replace(regex, value);
-          console.log("After replacement:", rendered);
+        const variableMatches = Array.from(template.matchAll(/\{\{([^}]+)\}\}/g));
+        const variableMap = /* @__PURE__ */ new Map();
+        variableMatches.forEach((match) => {
+          var _a, _b;
+          const [full, content] = match;
+          const [nameWithStar, ...rest] = content.trim().split("|");
+          const name = nameWithStar.replace("*", "").trim();
+          const required = nameWithStar.includes("*");
+          const description = (_a = rest[0]) == null ? void 0 : _a.trim();
+          const options = (_b = rest[1]) == null ? void 0 : _b.split(",").map((o) => o.trim());
+          variableMap.set(name, {
+            full,
+            name,
+            required,
+            description,
+            options
+          });
         });
-        rendered = rendered.replace(/\{\{\s*template_output(?:\s*\*)?(?:\s*\|[^}]*)?\\s*\}\}/g, "");
+        Object.entries(data).forEach(([key, value]) => {
+          if (value && value.trim()) {
+            console.log(`Replacing ${key} with ${value}`);
+            const regex = new RegExp(
+              `\\{\\{\\s*${key}(?:\\s*\\*)?(?:\\s*\\|[^}]*)?\\s*\\}\\}`,
+              "g"
+            );
+            rendered = rendered.replace(regex, value);
+          }
+        });
+        rendered = rendered.replace(/.*\{\{template_output(?:\s*\*)?(?:\s*\|[^}]*)?\}\}.*\n?/g, "");
+        rendered = rendered.replace(/\{\{([^}]+)\}\}/g, (match, content) => {
+          const [nameWithStar, ...rest] = content.trim().split("|");
+          const name = nameWithStar.replace("*", "").trim();
+          return `{{${name}}}`;
+        });
         console.log("Final rendered:", rendered);
         const file = yield this.app.vault.create(filePath, rendered);
         yield this.app.workspace.getLeaf(false).openFile(file);
