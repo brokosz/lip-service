@@ -1,0 +1,12 @@
+{
+    "id": "lip-service",
+    "name": "Lip Service",
+    "version": "1.0.0",
+    "minAppVersion": "0.15.0",
+    "description": "Create notes from Mustache templates with enhanced template expansion.",
+    "author": "Brad Rokosz",
+    "authorUrl": "https://github.com/brokosz",
+    "isDesktopOnly": false
+    "repo": "brokosz/lip-service",
+    "branch": "main"
+}

@@ -1,0 +1,26 @@
+{
+    "name": "Lip Service",
+    "version": "1.0.0",
+    "description": "Mustache templates plugin for Obsidian",
+    "main": "main.js",
+    "scripts": {
+        "dev": "node esbuild.config.mjs",
+        "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+    },
+    "keywords": ["obsidian", "mustache", "templates"],
+    "author": "Brad Rokosz",
+    "license": "MIT",
+    "devDependencies": {
+        "@types/node": "^20.10.0",
+        "@typescript-eslint/eslint-plugin": "^6.12.0",
+        "@typescript-eslint/parser": "^6.12.0",
+        "builtin-modules": "^3.3.0",
+        "esbuild": "^0.19.8",
+        "obsidian": "^1.4.11",
+        "tslib": "^2.6.2",
+        "typescript": "^5.3.2"
+    },
+    "dependencies": {
+        "mustache": "^4.2.0"
+    }
+}
