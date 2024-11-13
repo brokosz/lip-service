@@ -105,7 +105,7 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
         let type = "text";
         let description;
         let options;
-        if (name.toLowerCase().includes("date")) {
+        if (name.toLowerCase() === "date") {
           type = "date";
         }
         parts.forEach((part) => {
@@ -172,15 +172,18 @@ var MustacheTemplatesPlugin = class extends import_obsidian.Plugin {
         const templateOutputMatch = template.match(/\{\{template_output(?:\s*\*)?(?:\s*\|[^}]*)?\}\}(.*?)(?=\n|$)/);
         let outputPath = "";
         if (templateOutputMatch) {
-          const templatePath = templateOutputMatch[1].trim();
+          let templatePath = templateOutputMatch[1].trim();
+          Object.entries(data).forEach(([key, value]) => {
+            if (value && value.trim()) {
+              const regex = new RegExp(
+                `\\{\\{\\s*${key}(?:\\s*\\*)?(?:\\s*\\|[^}]*)?\\s*\\}\\}`,
+                "g"
+              );
+              templatePath = templatePath.replace(regex, value);
+            }
+          });
           const modalPath = data["template_output"] || "";
-          if (modalPath) {
-            const cleanTemplatePath = templatePath.replace(/\/$/, "");
-            const cleanModalPath = modalPath.replace(/\/$/, "");
-            outputPath = cleanTemplatePath ? `${cleanTemplatePath}/${cleanModalPath}`.replace(/\/+/g, "/") : cleanModalPath;
-          } else {
-            outputPath = templatePath;
-          }
+          outputPath = modalPath ? `${templatePath}/${modalPath}`.replace(/\/+/g, "/") : templatePath;
         } else {
           outputPath = data["template_output"] || "";
         }
@@ -327,9 +330,13 @@ var TemplateVariablesModal = class extends import_obsidian.Modal {
           setting.addText((text) => {
             text.inputEl.type = "date";
             if (variable.required) {
-              const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-              text.setValue(today);
-              this.variables[variable.name] = today;
+              const today = /* @__PURE__ */ new Date();
+              const year = today.getFullYear();
+              const month = String(today.getMonth() + 1).padStart(2, "0");
+              const day = String(today.getDate()).padStart(2, "0");
+              const localDate = `${year}-${month}-${day}`;
+              text.setValue(localDate);
+              this.variables[variable.name] = localDate;
             }
             text.onChange((value) => {
               this.variables[variable.name] = value;
@@ -345,7 +352,9 @@ var TemplateVariablesModal = class extends import_obsidian.Modal {
       }
     });
     if (variables.some((v) => v.name === "template_output")) {
-      new import_obsidian.Setting(formContainer).setName("Save Location").setDesc("Path where the file will be saved").addText((text) => text.setPlaceholder("e.g., folder/subfolder").onChange((value) => {
+      const templateOutputMatch = this.templateContent.match(/\{\{template_output(?:\s*\*)?(?:\s*\|[^}]*)?\}\}(.*?)(?=\n|$)/);
+      const templatePath = templateOutputMatch ? templateOutputMatch[1].trim() : "";
+      new import_obsidian.Setting(formContainer).setName("Save Location (Optional)").setDesc(`Additional path to append. Leave empty to use just the path from the template.`).addText((text) => text.setPlaceholder(`${templatePath}`).onChange((value) => {
         this.variables["template_output"] = value;
       }));
     }
