@@ -47,15 +47,14 @@ Tags: {{tags}}
 {{notes}}
 ```
 
-#### Interview Note
+#### Daily Note
 ```markdown
-{{template_output}}/Interviews/Tech/{{candidate}}
-# {{candidate*}} Tech Interview
-
-Date: [[{{date*}}]]
-Interviewer: {{interviewer*}}
-Position: {{position}}
+{{template_output}}/daily/{{date*}}
+# {{date*}}
 Tags: {{tags}}
+
+## Tasks
+{{tasks}}
 
 ## Notes
 {{notes}}
