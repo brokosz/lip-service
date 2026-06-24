@@ -7,7 +7,11 @@
         "dev": "node esbuild.config.mjs",
         "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
     },
-    "keywords": ["obsidian", "mustache", "templates"],
+    "keywords": [
+        "obsidian",
+        "mustache",
+        "templates"
+    ],
     "author": "Brad Rokosz",
     "license": "MIT",
     "devDependencies": {
